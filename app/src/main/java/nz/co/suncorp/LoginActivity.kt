@@ -3,27 +3,25 @@ package nz.co.suncorp
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.annotation.TargetApi
-import android.content.pm.PackageManager
-import android.support.design.widget.Snackbar
+import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.support.v4.app.LoaderManager.LoaderCallbacks
-import android.support.v4.content.CursorLoader
 import android.support.v4.content.Loader
 import android.database.Cursor
-import android.net.Uri
+import android.database.sqlite.SQLiteDatabase
+import android.graphics.Color
 import android.os.AsyncTask
 import android.os.Build
 import android.os.Bundle
-import android.provider.ContactsContract
-import android.text.TextUtils
+
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.widget.ArrayAdapter
 import android.widget.TextView
 
-import android.Manifest.permission.READ_CONTACTS
 import android.os.StrictMode
 import android.util.Log
+import android.widget.EditText
+import android.widget.Toast
 
 
 import kotlinx.android.synthetic.main.activity_login.*
@@ -32,12 +30,22 @@ import org.json.JSONTokener
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.*
 
 
 /**
  * A login screen that offers login via email/password.
  */
 class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
+    override fun openOrCreateDatabase(name: String?, mode: Int, factory: SQLiteDatabase.CursorFactory?): SQLiteDatabase {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun onCreateLoader(p0: Int, p1: Bundle?): Loader<Cursor> {
+        TODO("not implemented")
+        //To change body of created functions use File | Settings | File Templates.
+    }
+
     /**
      * Keep track of the login task to ensure we can cancel it if requested.
      */
@@ -49,6 +57,7 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         // Set up the login form.
+        val password = findViewById<EditText>(R.id.password)
         password.setOnEditorActionListener(TextView.OnEditorActionListener { _, id, _ ->
             if (id == EditorInfo.IME_ACTION_DONE || id == EditorInfo.IME_NULL) {
                 attemptLogin()
@@ -57,10 +66,22 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
             false
         })
 
-        email_sign_in_button.setOnClickListener { attemptLogin() }
+
+
+        sign_in_button.setOnClickListener { attemptLogin() }
     }
 
 
+    private fun loginFailed() {
+        val text = "Could not login. Please try again."
+        val toast = Toast.makeText(applicationContext, text, Toast.LENGTH_LONG)
+        val view = toast.view
+        view.setBackgroundColor(Color.YELLOW)
+     //   val tv = TextView(applicationContext)
+     //   tv.setBackgroundColor(Color.YELLOW)
+    //    toast.view = tv
+        toast.show()
+    }
 
     /**
      * Attempts to sign in or register the account specified by the login form.
@@ -74,52 +95,24 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         }
 
         // Reset errors.
-        email.error = null
+
+        val username = findViewById<EditText>(R.id.username)
+        val password = findViewById<EditText>(R.id.password)
+        username.error = null
         password.error = null
 
         // Store values at the time of the login attempt.
-        val emailStr = email.text.toString()
+        val userNameStr = username.text.toString()
         val passwordStr = password.text.toString()
 
-        var cancel = false
-        var focusView: View? = null
-
-        // Check for a valid password, if the user entered one.
-        if (!TextUtils.isEmpty(passwordStr) && !isPasswordValid(passwordStr)) {
-            password.error = getString(R.string.error_invalid_password)
-            focusView = password
-            cancel = true
-        }
-
-        // Check for a valid email address.
-        if (TextUtils.isEmpty(emailStr)) {
-            email.error = getString(R.string.error_field_required)
-            focusView = email
-            cancel = true
-        } else if (!isEmailValid(emailStr)) {
-            email.error = getString(R.string.error_invalid_email)
-            focusView = email
-            cancel = true
-        }
-
-        if (cancel) {
-            // There was an error; don't attempt login and focus the first
-            // form field with an error.
-            focusView?.requestFocus()
-        } else {
-            // Show a progress spinner, and kick off a background task to
-            // perform the user login attempt.
-
-
-
-            getLoginInfo()
           //  getGoole()
+
             showProgress(true)
-            mAuthTask = UserLoginTask(emailStr, passwordStr)
+            mAuthTask = UserLoginTask(userNameStr, passwordStr)
             mAuthTask!!.execute(null as Void?)
 
 
-        }
+
     }
 
     private fun getGoole() {
@@ -134,7 +127,7 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         }
     }
 
-    private fun getLoginInfo() {
+    private fun getLoginInfo(userName: String, password: String): Boolean {
         //TODO - write code to auth
         var CLIENT_ID = "c1da6b73-fced-454e-9086-bba38817af42"  //PROD
         var CLIENT_ID_HEADER = "client_id"
@@ -148,48 +141,54 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         conn.doOutput = true
         conn.setRequestProperty(CLIENT_ID_HEADER, CLIENT_ID)
         conn.setRequestProperty(CONTENT_TYPE_HEADER, APPLICATION_URLENCODED)
-        OutputStreamWriter(conn.getOutputStream()).use {
+        OutputStreamWriter(conn.outputStream).use {
             // by `it` value you can get your OutputStreamWriter
-            it.write("username=U342597&password=Nice3535&grant_type=password")
+            it.write("username=" + userName + "&password=" + password + "&grant_type=password")
 
         }
 
       //  conn.connect()
         try {
-            Log.i("Heloooooo" , "get google....")
-            Log.i("url connection ******* : ", conn.inputStream.toString())
-            Log.i("responseCode " , conn.responseCode.toString())
-            Log.i("responseMessage " , conn.responseMessage.toString())
+
+            Log.i("Real MAdrid..." , "getLoginInfo....")
+
+            if(conn.responseCode == 200) {
+
+                Log.i("url connection ******* : ", conn.inputStream.toString())
+                Log.i("responseCode " , conn.responseCode.toString())
+                Log.i("responseMessage " , conn.responseMessage.toString())
 
 
-            val abc  = conn.inputStream
-            val allText = conn.inputStream.bufferedReader().use(BufferedReader::readText)
-            Log.i("allText",allText)
+                val abc  = conn.inputStream
+                val allText = conn.inputStream.bufferedReader().use(BufferedReader::readText)
+                Log.i("allText",allText)
 
 
 
-    val json = JSONTokener(allText).nextValue() as JSONObject
-     val accessToken =  json.get("access_token") as String
+                val json = JSONTokener(allText).nextValue() as JSONObject
+                val accessToken =  json.get("access_token") as String
 
-            Log.i("access_token : ", accessToken)
+                Log.i("access_token : ", accessToken)
 
-            Log.i("", "")
+                Log.i("", "")
+
+                return true
+
+            } else {
+                //TODO display error message
+
+                //this.runOnUiThread()
+                return false
+            }
+
 
         } finally {
             conn.disconnect()
+
         }
 
     }
 
-    private fun isEmailValid(email: String): Boolean {
-        //TODO: Replace this with your own logic
-        return email.contains("@")
-    }
-
-    private fun isPasswordValid(password: String): Boolean {
-        //TODO: Replace this with your own logic
-        return password.length > 4
-    }
 
     /**
      * Shows the progress UI and hides the login form.
@@ -199,6 +198,10 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         // On Honeycomb MR2 we have the ViewPropertyAnimator APIs, which allow
         // for very easy animations. If available, use these APIs to fade-in
         // the progress spinner.
+        if (android.os.Build.VERSION.SDK_INT > 9) {
+            val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
+            StrictMode.setThreadPolicy(policy)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
             val shortAnimTime = resources.getInteger(android.R.integer.config_shortAnimTime).toLong()
 
@@ -229,57 +232,23 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         }
     }
 
-    override fun onCreateLoader(i: Int, bundle: Bundle?): Loader<Cursor> {
-        return CursorLoader(this,
-                // Retrieve data rows for the device user's 'profile' contact.
-                Uri.withAppendedPath(ContactsContract.Profile.CONTENT_URI,
-                        ContactsContract.Contacts.Data.CONTENT_DIRECTORY), ProfileQuery.PROJECTION,
-
-                // Select only email addresses.
-                ContactsContract.Contacts.Data.MIMETYPE + " = ?", arrayOf(ContactsContract.CommonDataKinds.Email
-                .CONTENT_ITEM_TYPE),
-
-                // Show primary email addresses first. Note that there won't be
-                // a primary email address if the user hasn't specified one.
-                ContactsContract.Contacts.Data.IS_PRIMARY + " DESC")
-    }
 
     override fun onLoadFinished(cursorLoader: Loader<Cursor>, cursor: Cursor) {
-        val emails = ArrayList<String>()
-        cursor.moveToFirst()
-        while (!cursor.isAfterLast) {
-            emails.add(cursor.getString(ProfileQuery.ADDRESS))
-            cursor.moveToNext()
-        }
 
-        addEmailsToAutoComplete(emails)
+
     }
 
     override fun onLoaderReset(cursorLoader: Loader<Cursor>) {
 
     }
 
-    private fun addEmailsToAutoComplete(emailAddressCollection: List<String>) {
-        //Create adapter to tell the AutoCompleteTextView what to show in its dropdown list.
-        val adapter = ArrayAdapter(this@LoginActivity,
-                android.R.layout.simple_dropdown_item_1line, emailAddressCollection)
 
-        email.setAdapter(adapter)
-    }
-
-    object ProfileQuery {
-        val PROJECTION = arrayOf(
-                ContactsContract.CommonDataKinds.Email.ADDRESS,
-                ContactsContract.CommonDataKinds.Email.IS_PRIMARY)
-        val ADDRESS = 0
-        val IS_PRIMARY = 1
-    }
 
     /**
      * Represents an asynchronous login/registration task used to authenticate
      * the user.
      */
-    inner class UserLoginTask internal constructor(private val mEmail: String, private val mPassword: String) : AsyncTask<Void, Void, Boolean>() {
+    inner class UserLoginTask internal constructor(private val userName: String, private val password: String) : AsyncTask<Void, Void, Boolean>() {
 
         override fun doInBackground(vararg params: Void): Boolean? {
             // TODO: attempt authentication against a network service.
@@ -287,18 +256,14 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
             try {
                 // Simulate network access.
                 Thread.sleep(2000)
+                Log.i("call getLoginInfo : " , "***********")
+                return getLoginInfo(userName, password);
+
             } catch (e: InterruptedException) {
                 return false
             }
 
-            return DUMMY_CREDENTIALS
-                    .map { it.split(":") }
-                    .firstOrNull { it[0] == mEmail }
-                    ?.let {
-                        // Account exists, return true if the password matches.
-                        it[1] == mPassword
-                    }
-                    ?: true
+            return  false
         }
 
         override fun onPostExecute(success: Boolean?) {
@@ -306,10 +271,18 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
             showProgress(false)
 
             if (success!!) {
-                finish()
+
+                    // Simulate network access.
+                    Thread.sleep(2000)
+
+                showPolicyScreen()
+              //  finish()
             } else {
-                password.error = getString(R.string.error_incorrect_password)
-                password.requestFocus()
+                //password.error = getString(R.string.error_incorrect_password)
+                //password.requestFocus()
+                //TODO - show Error message
+                Log.e("ERROR : ", "Login failed.....")
+                loginFailed()
             }
         }
 
@@ -319,18 +292,15 @@ class LoginActivity : AppCompatActivity(), LoaderCallbacks<Cursor> {
         }
     }
 
+    fun showPolicyScreen()
+    {
+        val intent = Intent(this, PolicyActivity::class.java)
+        startActivity(intent)
+    }
+
     companion object {
 
-        /**
-         * Id to identity READ_CONTACTS permission request.
-         */
-        private val REQUEST_READ_CONTACTS = 0
 
-        /**
-         * A dummy authentication store containing known user names and passwords.
-         * TODO: remove after connecting to a real authentication system.
-         */
-        private val DUMMY_CREDENTIALS = arrayOf("f@e.com:hello", "bar@example.com:world")
     }
 }
 
